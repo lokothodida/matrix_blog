@@ -5,21 +5,21 @@ A blogging plugin for GetSimple using n00dles' The Matrix.
 
 FEATURES
 ===========
-  Full template editing - modify almost any aspect of the blog's look
-  Custom field creation - by virtue of using The Matrix, you can use The Matrix to add extra fields that may be needed
-  Category creation - easily created from a textarea, with sub-categories created simply using '> ' for different levels of indentation
-  i18n integration - entries can be created in multiple languages and can be created exclusively in one language (without
-                    being the base langauge of your site)
-  i18n searchable - entries are fully indexed by i18n search (and you can remove individual entries from the results)
-  Built-in comments system - readers can comment on your posts. Don't worry about commenters trying to impersonate
-              the
+* Full template editing - modify almost any aspect of the blog's look
+* Custom field creation - by virtue of using The Matrix, you can use The Matrix to add extra fields that may be needed
+* Category creation - easily created from a textarea, with sub-categories created simply using '> ' for different levels of indentation
+* i18n integration - entries can be created in multiple languages and can be created exclusively in one language (without
+                  being the base langauge of your site)
+i18n searchable - entries are fully indexed by i18n search (and you can remove individual entries from the results)
+Built-in comments system - readers can comment on your posts. Don't worry about commenters trying to impersonate
+            the
 
-CORE DEPENDENCIES
-===========
-i18n
-i18n Search
-Pajify
-The Matrix
+#CORE DEPENDENCIES
+
+* i18n
+* i18n Search
+* Pajify
+* The Matrix
 
 INSTALLATION
 ===========
