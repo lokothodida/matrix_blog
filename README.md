@@ -25,27 +25,26 @@ INSTALLATION
 ===========
 Download and install the CORE DEPENDENCIES first to your /plugins folder. Then to the same for this plugin.
 
-USAGE
+BASIC USAGE
 ===========
 On the Pages tab of the admin panel, you will see 'Blog Entries'. click there to open the main panel.
 
-  VIEW
-  =========
+  # VIEW
   Click 'View' to view your blog's main page.
   
   ENTRIES
-  Click 'Create Entry' to create a blog entry.
-  Click '#' next to an entry to view it.
-  Click 'x' next to an entry to delete it (this can be undone on the immediately following page)
-  Click on an entry's name to edit it.
+  * Click 'Create Entry' to create a blog entry.
+  * Click '#' next to an entry to view it.
+  * Click 'x' next to an entry to delete it (this can be undone on the immediately following page)
+  * Click on an entry's name to edit it.
   
   You can also sort your view of the entries via Title, Slug, Creation and Publication date.
   
   TEMPLATES
-  You can edit the look of the following templates:
-    HEADER (for HTML, CSS and Javascript at the top of the page)
-    ENTRY (for the individual entry)
-    EXCERPT (for how entries look on the main blog page and in search results)
-    COMMENTS (for how each comment will be formatted)
-    AUTHOR (for your author's page)
-    SIDEBAR
+  * You can edit the look of the following templates:
+    * HEADER (for HTML, CSS and Javascript at the top of the page)
+    * ENTRY (for the individual entry)
+    * EXCERPT (for how entries look on the main blog page and in search results)
+    * COMMENTS (for how each comment will be formatted)
+    * AUTHOR (for your author's page)
+    * SIDEBAR
