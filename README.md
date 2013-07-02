@@ -4,6 +4,7 @@ matrix_blog
 A blogging plugin for GetSimple using n00dles' The Matrix.
 
 FEATURES
+===========
   Full template editing - modify almost any aspect of the blog's look
   Custom field creation - by virtue of using The Matrix, you can use The Matrix to add extra fields that may be needed
   Category creation - easily created from a textarea, with sub-categories created simply using '> ' for different levels of indentation
@@ -14,18 +15,22 @@ FEATURES
               the
 
 CORE DEPENDENCIES
+===========
 i18n
 i18n Search
 Pajify
 The Matrix
 
 INSTALLATION
+===========
 Download and install the CORE DEPENDENCIES first to your /plugins folder. Then to the same for this plugin.
 
 USAGE
+===========
 On the Pages tab of the admin panel, you will see 'Blog Entries'. click there to open the main panel.
 
   VIEW
+  =========
   Click 'View' to view your blog's main page.
   
   ENTRIES
