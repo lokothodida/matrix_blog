@@ -27,6 +27,8 @@ BASIC USAGE
 ===========
 On the Pages tab of the admin panel, you will see 'Blog Entries'. click there to open the main panel.
 
+To show the sidebar, call the function 'mblog_show_sidebar' on your current theme's template/in a component (e.g. <?php mblog_show_sidebar(); ?>)
+
 # VIEW
   Click 'View' to view your blog's main page.
   
