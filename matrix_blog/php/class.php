@@ -4,7 +4,7 @@ class MatrixBlog {
   /* constants */
   const ID             = 'blog';
   const FILE           = 'matrix_blog';
-  const VERSION        = '0.1';
+  const VERSION        = '0.2';
   const AUTHOR         = 'Lawrence Okoth-Odida';
   const URL            = 'http://lokida.co.uk';
   const PAGE           = 'pages';
@@ -45,108 +45,142 @@ class MatrixBlog {
      
   // constructor
   public function __construct() {
-    // load globals from XML
-    $websiteXML = XML2Array::createArray(file_get_contents(GSDATAOTHERPATH.'website.xml'));
-    $this->glob['sitename']   = $websiteXML['item']['SITENAME']['@cdata'];
-    $this->glob['siteurl']    = $websiteXML['item']['SITEURL']['@cdata'];
-    $this->glob['template']   = $websiteXML['item']['TEMPLATE']['@cdata'];
-    $this->glob['prettyurls'] = $websiteXML['item']['PRETTYURLS'];
-    $this->glob['permalink']  = $websiteXML['item']['PERMALINK'];
-    
-    // initialize objects
-    $this->matrix  = new TheMatrix;
-    $this->parser  = new TheMatrixParser;
-    
     // load language placeholders
     $this->title    = i18n_r(self::FILE.'/TITLE');
     $this->desc     = i18n_r(self::FILE.'/DESC');
     $this->sidebar  = i18n_r(self::FILE.'/SIDEBAR_TEXT');
     
-    // selectable languages
-    $this->languages = array('en', 'it', 'ru');
-    
-    // build tables
-    $this->buildTables();
-    
-    // get schema for blog table and comments
-    $this->schema = $this->matrix->getSchema(self::TABLE_BLOG);
-    $this->commentsSchema = $this->matrix->getSchema(self::TABLE_COMMENTS);
-    
-    // configuration
-    $config = $this->matrix->query('SELECT * FROM '.self::TABLE_CONFIG, 'SINGLE');
-    $config['entryconfig'] = $this->matrix->explodeTrim("\n", $config['entryconfig']);
-    $config['imageconfig'] = $this->matrix->explodeTrim("\n", $config['imageconfig']);
-    $config['commentsconfigint'] = $this->matrix->explodeTrim("\n", $config['commentsconfigint']);
-    $config['commentsconfigcheck'] = $this->matrix->explodeTrim("\n", $config['commentsconfigcheck']);
-    $config['commentsbanlist'] = $this->matrix->explodeTrim("\n", $config['commentsbanlist']);
-    $config['commentscensor'] = $this->matrix->explodeTrim("\n", $config['commentscensor']);
-    $this->config   = array(
-      'siteurl'         => $this->glob['siteurl'],
-      'url'             => $config['baseurl'],
-      'entryurl'        => $config['baseurl'].'$yyyy/$mm/$dd/$slug/',
-      'authorurl'       => $config['baseurl'].$config['authorurl'],
-      'authorurlrel'    => $config['authorurl'],
-      'imgurl'          => $this->glob['siteurl'].'data/uploads/'.$this->schema['fields']['image']['path'],
-      'thumburl'        => $this->glob['siteurl'].'data/thumbs/'.$this->schema['fields']['image']['path'],
-      'title'           => $config['title'],
-      'tags'            => explode(',', $config['tags']),
-      'slug'            => $config['slug'],
-      'template'        => $config['template'],
-      'excerpt'         => $config['entryconfig'][0],
-      'entriesperpage'  => $config['entryconfig'][1],
-      'paragperentry'   => $config['entryconfig'][2],
-      'commentsperpage' => $config['commentsconfigint'][0],
-      'commentsmsg'     => $config['commentsmsg'],
-      'commentsminchar' => $config['commentsconfigint'][1],
-      'commentsmaxchar' => $config['commentsconfigint'][2],
-      'banlist'         => $config['commentsbanlist'],
-      'censor'          => $config['commentscensor'],
-    );
-    
-    // global matrix-blog
-    $this->blog    = $this->matrix->query('SELECT * FROM '.self::TABLE_BLOG.' ORDER BY credate DESC', 'MULTI', $cache=false);
-    
-    // fixes id of key (for search results, so the loop doesn't need to be done there).
-    foreach ($this->blog as $key=>$entry) {
-      $tmpentry = $entry;
-      unset($this->blog[$key]);
-      $this->blog[$entry['id']] = $tmpentry;
-    }
-    
-    // categories
-    $this->categories = $this->getCategoryTags();
-    
-    // authors
-    $this->authors = $this->matrix->getUsers();
-    
-    // links to templates
-    $this->template = GSDATAOTHERPATH.'/matrix_blog_template.xml';
-    $this->templates = array();
-    $this->templates['header']   = GSPLUGINPATH.self::FILE.'/php/display/header.php';
-    $this->templates['entry']    = GSPLUGINPATH.self::FILE.'/php/display/entry.php';
-    $this->templates['excerpt']  = GSPLUGINPATH.self::FILE.'/php/display/excerpt.php';
-    $this->templates['sidebar']  = GSPLUGINPATH.self::FILE.'/php/display/sidebar.php';
-    $this->templates['authors']  = GSPLUGINPATH.self::FILE.'/php/display/authors.php';
-    $this->templates['author']   = GSPLUGINPATH.self::FILE.'/php/display/author.php';
-    $this->templates['comments'] = GSPLUGINPATH.self::FILE.'/php/display/comments.php';
-    
-    // create template file
-    if (!file_exists($this->template)) {
-      $tmp = array();
-      foreach ($this->templates as $key => $template) {
-        $tmp[$key]['@cdata'] = file_get_contents($template);
+    // check dependencies
+    if ($this->checkDependencies()) {
+      // load globals from XML
+      $websiteXML = XML2Array::createArray(file_get_contents(GSDATAOTHERPATH.'website.xml'));
+      $this->glob['sitename']   = $websiteXML['item']['SITENAME']['@cdata'];
+      $this->glob['siteurl']    = $websiteXML['item']['SITEURL']['@cdata'];
+      $this->glob['template']   = $websiteXML['item']['TEMPLATE']['@cdata'];
+      $this->glob['prettyurls'] = $websiteXML['item']['PRETTYURLS'];
+      $this->glob['permalink']  = $websiteXML['item']['PERMALINK'];
+      
+      // initialize objects
+      $this->matrix  = new TheMatrix;
+      $this->parser  = new TheMatrixParser;
+      
+      // selectable languages
+      $this->languages = array('en', 'it', 'ru');
+      
+      // build tables
+      $this->buildTables();
+      
+      // get schema for blog table and comments
+      $this->schema = $this->matrix->getSchema(self::TABLE_BLOG);
+      $this->commentsSchema = $this->matrix->getSchema(self::TABLE_COMMENTS);
+      
+      // configuration
+      $config = $this->matrix->query('SELECT * FROM '.self::TABLE_CONFIG, 'SINGLE');
+      $config['entryconfig'] = $this->matrix->explodeTrim("\n", $config['entryconfig']);
+      $config['imageconfig'] = $this->matrix->explodeTrim("\n", $config['imageconfig']);
+      $config['commentsconfigint'] = $this->matrix->explodeTrim("\n", $config['commentsconfigint']);
+      $config['commentsconfigcheck'] = $this->matrix->explodeTrim("\n", $config['commentsconfigcheck']);
+      $config['commentsbanlist'] = $this->matrix->explodeTrim("\n", $config['commentsbanlist']);
+      $config['commentscensor'] = $this->matrix->explodeTrim("\n", $config['commentscensor']);
+      $this->config   = array(
+        'siteurl'         => $this->glob['siteurl'],
+        'url'             => $config['baseurl'],
+        'entryurl'        => $config['baseurl'].'$yyyy/$mm/$dd/$slug/',
+        'authorurl'       => $config['baseurl'].$config['authorurl'],
+        'authorurlrel'    => $config['authorurl'],
+        'imgurl'          => $this->glob['siteurl'].'data/uploads/'.$this->schema['fields']['image']['path'],
+        'thumburl'        => $this->glob['siteurl'].'data/thumbs/'.$this->schema['fields']['image']['path'],
+        'title'           => $config['title'],
+        'tags'            => explode(',', $config['tags']),
+        'slug'            => $config['slug'],
+        'template'        => $config['template'],
+        'excerpt'         => $config['entryconfig'][0],
+        'entriesperpage'  => $config['entryconfig'][1],
+        'paragperentry'   => $config['entryconfig'][2],
+        'commentsperpage' => $config['commentsconfigint'][0],
+        'commentsmsg'     => $config['commentsmsg'],
+        'commentsminchar' => $config['commentsconfigint'][1],
+        'commentsmaxchar' => $config['commentsconfigint'][2],
+        'banlist'         => $config['commentsbanlist'],
+        'censor'          => $config['commentscensor'],
+      );
+      
+      // global matrix-blog
+      $this->blog    = $this->matrix->query('SELECT * FROM '.self::TABLE_BLOG.' ORDER BY credate DESC', 'MULTI', $cache=false);
+      
+      // fixes id of key (for search results, so the loop doesn't need to be done there).
+      foreach ($this->blog as $key=>$entry) {
+        $tmpentry = $entry;
+        unset($this->blog[$key]);
+        $this->blog[$entry['id']] = $tmpentry;
       }
-      $xml = Array2XML::createXML('channel', $tmp);
-      $xml->save($this->template);
-      #echo $xml->saveXML();
+      
+      // categories
+      $this->categories = $this->getCategoryTags();
+      
+      // authors
+      $this->authors = $this->matrix->getUsers();
+      
+      // links to templates
+      $this->template = GSDATAOTHERPATH.'/matrix_blog_template.xml';
+      $this->templates = array();
+      $this->templates['header']   = GSPLUGINPATH.self::FILE.'/php/display/header.php';
+      $this->templates['entry']    = GSPLUGINPATH.self::FILE.'/php/display/entry.php';
+      $this->templates['excerpt']  = GSPLUGINPATH.self::FILE.'/php/display/excerpt.php';
+      $this->templates['sidebar']  = GSPLUGINPATH.self::FILE.'/php/display/sidebar.php';
+      $this->templates['authors']  = GSPLUGINPATH.self::FILE.'/php/display/authors.php';
+      $this->templates['author']   = GSPLUGINPATH.self::FILE.'/php/display/author.php';
+      $this->templates['comments'] = GSPLUGINPATH.self::FILE.'/php/display/comments.php';
+      
+      // create template file
+      if (!file_exists($this->template)) {
+        $tmp = array();
+        foreach ($this->templates as $key => $template) {
+          $tmp[$key]['@cdata'] = file_get_contents($template);
+        }
+        $xml = Array2XML::createXML('channel', $tmp);
+        $xml->save($this->template);
+        #echo $xml->saveXML();
+      }
+      
+      // load uri
+      $this->uri = $this->parseURI();
+      
+      if ($this->isFrontEnd() && $this->initBlog()) {
+        $type = $this->getPageType($this->slug);
+      }
+    }
+  }
+  
+  // check dependencies
+  private function checkDependencies() {
+    if (
+      class_exists('TheMatrix') &&
+      function_exists('i18n_init') && 
+      function_exists('get_i18n_search_results') && 
+      function_exists('pagify')
+    ) return true;
+    else return false;
+  }
+  
+  // missing dependencies
+  private function missingDependencies() {
+    $dependencies = array();
+    
+    if (!class_exists('TheMatrix')) {
+      $dependencies[] = array('name' => 'The Matrix', 'url' => 'https://github.com/n00dles/DM_matrix/');
+    }
+    if (!function_exists('i18n_init')) {
+      $dependencies[] = array('name' => 'I18N', 'url' => 'http://get-simple.info/extend/plugin/i18n/69/');
+    }
+    if (!function_exists('get_i18n_search_results')) {
+      $dependencies[] = array('name' => 'I18N Search', 'url' => 'http://get-simple.info/extend/plugin/i18n-search/82/');
+    }
+    if (!function_exists('pagify')) {
+      $dependencies[] = array('name' => 'Pagify', 'url' => 'http://get-simple.info/extend/plugin/pagify/83/');
     }
     
-    // load uri
-    $this->uri = $this->parseURI();
-    
-    if ($this->isFrontEnd() && $this->initBlog()) {
-      $type = $this->getPageType($this->slug);
-    }
+    return $dependencies;
   }
     
   // checks to see if this is the front/back end
@@ -1146,7 +1180,7 @@ class MatrixBlog {
     
     // buffer the contents of the template file into the content variable
     ob_start();
-    
+    if (in_array($this->config['slug'], $this->uri)) {
       // year
       if (is_numeric($uri[$lastpath]) && strlen($uri[$lastpath])==4) {
         $this->showArchive($uri[$lastpath]);
@@ -1170,6 +1204,7 @@ class MatrixBlog {
       else {
         $this->showArchive();
       }
+    }
     $data_index->content .= ob_get_contents();
     ob_end_clean();
   }
@@ -1300,99 +1335,82 @@ class MatrixBlog {
   public function admin() {
     $matrix = $this->matrix; // just to save you writing $this->matrix all the time
     
-    // create an entry
-    if (isset($_GET['create'])) {
-      include_once(GSPLUGINPATH.self::FILE.'/php/admin/create.php');
-    }
-    // edit an entry
-    elseif (isset($_GET['edit'])) {
-      include_once(GSPLUGINPATH.self::FILE.'/php/admin/edit.php');
-    }
-    // manage comments
-    elseif (isset($_GET['comments'])) {
-      if (is_numeric($_GET['comments'])) include_once(GSPLUGINPATH.self::FILE.'/php/admin/comments.php');
-    }
-    // edit templates
-    elseif (isset($_GET['template'])) {
-      // load template
-      $template = XML2Array::createArray(file_get_contents($this->template));
-      
-      // save changes
-      if ($_SERVER['REQUEST_METHOD']=='POST') {
-        // update the template
-        $template['channel'][$_GET['template']]['@cdata'] = $_POST['edit-template'];
-        $xml = Array2XML::createXML('channel', $template['channel']);
-        $xml->save($this->template);
-
-        // success message
-        if ($xml) {
-          $matrix->getAdminError(i18n_r(self::FILE.'/TEMPLATE_UPDATESUCCESS'), true);
-        }
-        // error message
-        else {
-          $matrix->getAdminError(i18n_r(self::FILE.'/TEMPLATE_UPDATEERROR'), false);
-        }
+    if ($this->checkDependencies()) {
+      // create an entry
+      if (isset($_GET['create'])) {
+        include_once(GSPLUGINPATH.self::FILE.'/php/admin/create.php');
       }
-      $template = $template['channel'][$_GET['template']]['@cdata'];
+      // edit an entry
+      elseif (isset($_GET['edit'])) {
+        include_once(GSPLUGINPATH.self::FILE.'/php/admin/edit.php');
+      }
+      // manage comments
+      elseif (isset($_GET['comments'])) {
+        if (is_numeric($_GET['comments'])) include_once(GSPLUGINPATH.self::FILE.'/php/admin/comments.php');
+      }
+      // edit templates
+      elseif (isset($_GET['template'])) {
+        // load template
+        $template = XML2Array::createArray(file_get_contents($this->template));
+        
+        // save changes
+        if ($_SERVER['REQUEST_METHOD']=='POST') {
+          // update the template
+          $template['channel'][$_GET['template']]['@cdata'] = $_POST['edit-template'];
+          $xml = Array2XML::createXML('channel', $template['channel']);
+          $xml->save($this->template);
 
-      ?>
-      
-    <!--header-->
-      <h3 class="floated"><?php echo i18n_r(self::FILE.'/'.strtoupper($_GET['template'])); ?></h3>
-      <div class="edit-nav">
-        <a href="load.php?id=<?php echo self::FILE; ?>"><?php echo i18n_r(self::FILE.'/BACK'); ?></a>
-        <a href="load.php?id=<?php echo self::FILE; ?>&template=sidebar" <?php if ($_GET['template']=='sidebar') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/LABEL_SIDEBAR'); ?></a>  
-        <a href="load.php?id=<?php echo self::FILE; ?>&template=author" <?php if ($_GET['template']=='author') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/AUTHOR'); ?></a>
-        <a href="load.php?id=<?php echo self::FILE; ?>&template=comments" <?php if ($_GET['template']=='comments') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/COMMENTS'); ?></a>
-        <a href="load.php?id=<?php echo self::FILE; ?>&template=excerpt" <?php if ($_GET['template']=='excerpt') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/LABEL_EXCERPT'); ?></a>  
-        <a href="load.php?id=<?php echo self::FILE; ?>&template=entry" <?php if ($_GET['template']=='entry') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/ENTRY'); ?></a>
-        <a href="load.php?id=<?php echo self::FILE; ?>&template=header" <?php if ($_GET['template']=='header') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/LABEL_HEADER'); ?></a> 
-        <div class="clear"></div>
-      </div>
-      
-      
-      <!--entry template-->
-      <form method="post">
-        <textarea name="edit-template" class="codeeditor DM_codeeditor text" id="post-edit-template"><?php echo $template; ?></textarea>
-        <?php
-          // get codemirror script
-          $matrix->initialiseCodeMirror();
-          $matrix->instantiateCodeMirror('edit-template');
+          // success message
+          if ($xml) {
+            $matrix->getAdminError(i18n_r(self::FILE.'/TEMPLATE_UPDATESUCCESS'), true);
+          }
+          // error message
+          else {
+            $matrix->getAdminError(i18n_r(self::FILE.'/TEMPLATE_UPDATEERROR'), false);
+          }
+        }
+        $template = $template['channel'][$_GET['template']]['@cdata'];
+
         ?>
-        <input type="submit" class="submit" value="<?php echo i18n_r('BTN_SAVECHANGES'); ?>"/>
-      </form>
-      
-      
-      <?php
-      
-      /*
-      // template pages
-      if ($_GET['template']=='header') {
-        include_once(GSPLUGINPATH.self::FILE.'/php/admin/header.php');
+        
+      <!--header-->
+        <h3 class="floated"><?php echo i18n_r(self::FILE.'/'.strtoupper($_GET['template'])); ?></h3>
+        <div class="edit-nav">
+          <a href="load.php?id=<?php echo self::FILE; ?>"><?php echo i18n_r(self::FILE.'/BACK'); ?></a>
+          <a href="load.php?id=<?php echo self::FILE; ?>&template=sidebar" <?php if ($_GET['template']=='sidebar') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/LABEL_SIDEBAR'); ?></a>  
+          <a href="load.php?id=<?php echo self::FILE; ?>&template=author" <?php if ($_GET['template']=='author') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/AUTHOR'); ?></a>
+          <a href="load.php?id=<?php echo self::FILE; ?>&template=comments" <?php if ($_GET['template']=='comments') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/COMMENTS'); ?></a>
+          <a href="load.php?id=<?php echo self::FILE; ?>&template=excerpt" <?php if ($_GET['template']=='excerpt') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/LABEL_EXCERPT'); ?></a>  
+          <a href="load.php?id=<?php echo self::FILE; ?>&template=entry" <?php if ($_GET['template']=='entry') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/ENTRY'); ?></a>
+          <a href="load.php?id=<?php echo self::FILE; ?>&template=header" <?php if ($_GET['template']=='header') echo 'class="current"'; ?>><?php echo i18n_r(self::FILE.'/LABEL_HEADER'); ?></a> 
+          <div class="clear"></div>
+        </div>
+        
+        
+        <!--entry template-->
+        <form method="post">
+          <textarea name="edit-template" class="codeeditor DM_codeeditor text" id="post-edit-template"><?php echo $template; ?></textarea>
+          <?php
+            // get codemirror script
+            $matrix->initialiseCodeMirror();
+            $matrix->instantiateCodeMirror('edit-template');
+          ?>
+          <input type="submit" class="submit" value="<?php echo i18n_r('BTN_SAVECHANGES'); ?>"/>
+        </form>
+        <?php
       }
-      elseif ($_GET['template']=='excerpt') {
-        include_once(GSPLUGINPATH.self::FILE.'/php/admin/excerpt.php');
+      // configuration
+      elseif (isset($_GET['config'])) {
+        include_once(GSPLUGINPATH.self::FILE.'/php/admin/config.php');
       }
-      elseif ($_GET['template']=='comments') {
-        include_once(GSPLUGINPATH.self::FILE.'/php/admin/comment.php');
+      // view all entries
+      else {
+        include_once(GSPLUGINPATH.self::FILE.'/php/admin/entries.php');
       }
-      elseif ($_GET['template']=='sidebar') {
-        include_once(GSPLUGINPATH.self::FILE.'/php/admin/sidebar.php');
-      }
-      elseif ($_GET['template']=='author') {
-        include_once(GSPLUGINPATH.self::FILE.'/php/admin/author.php');
-      }
-      elseif($_GET['template']=='entry') {
-        include_once(GSPLUGINPATH.self::FILE.'/php/admin/entry.php');
-      }*/
     }
-    // configuration
-    elseif (isset($_GET['config'])) {
-      include_once(GSPLUGINPATH.self::FILE.'/php/admin/config.php');
-    }
-    // view all entries
     else {
-      include_once(GSPLUGINPATH.self::FILE.'/php/admin/entries.php');
+      $dependencies = $this->missingDependencies();
+      include(GSPLUGINPATH.self::FILE.'/php/admin/dependencies.php');
     }
   }
     

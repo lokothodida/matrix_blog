@@ -124,5 +124,9 @@
       'COMMENT_SUBMITTING'     => 'Preparing to submit comment',
       'COMMENTS_POSTSUCCESS'   => 'Your post was successfull.',
       'COMMENTS_POSTERROR'     => 'Your post was not successfull. Please try again later.',
+      
+    // dependencies
+      'MISSING_DEPENDENCIES'   => 'Missing Dependencies',
+      'PLEASE_INSTALL'         => 'Please install and enable the following plugins',
   );
 ?>
