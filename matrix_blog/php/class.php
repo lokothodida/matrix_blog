@@ -4,7 +4,7 @@ class MatrixBlog {
   /* constants */
   const ID             = 'blog';
   const FILE           = 'matrix_blog';
-  const VERSION        = '0.2';
+  const VERSION        = '0.3';
   const AUTHOR         = 'Lawrence Okoth-Odida';
   const URL            = 'http://lokida.co.uk';
   const PAGE           = 'pages';
@@ -17,6 +17,7 @@ class MatrixBlog {
   public  $title;
   public  $desc;
   public  $sidebar;
+  private $info = array();
   public  $glob;
   public  $siteurl;
   private $prettyurl;
@@ -35,6 +36,8 @@ class MatrixBlog {
   private $comments;
   private $archive;
   private $uri;
+  private $type;
+  private $init;
   private $commentParents  = array();
   private $commentChildren = array();
   private $commentCounter;
@@ -49,117 +52,151 @@ class MatrixBlog {
     $this->title    = i18n_r(self::FILE.'/TITLE');
     $this->desc     = i18n_r(self::FILE.'/DESC');
     $this->sidebar  = i18n_r(self::FILE.'/SIDEBAR_TEXT');
+    $init = false;
+  }
+  
+  // initialize
+  private function init() {
+    // load globals from XML
+    $websiteXML = XML2Array::createArray(file_get_contents(GSDATAOTHERPATH.'website.xml'));
+    $this->glob['sitename']   = $websiteXML['item']['SITENAME']['@cdata'];
+    $this->glob['siteurl']    = $websiteXML['item']['SITEURL']['@cdata'];
+    $this->glob['template']   = $websiteXML['item']['TEMPLATE']['@cdata'];
+    $this->glob['prettyurls'] = $websiteXML['item']['PRETTYURLS'];
+    $this->glob['permalink']  = $websiteXML['item']['PERMALINK'];
     
-    // check dependencies
-    if ($this->checkDependencies()) {
-      // load globals from XML
-      $websiteXML = XML2Array::createArray(file_get_contents(GSDATAOTHERPATH.'website.xml'));
-      $this->glob['sitename']   = $websiteXML['item']['SITENAME']['@cdata'];
-      $this->glob['siteurl']    = $websiteXML['item']['SITEURL']['@cdata'];
-      $this->glob['template']   = $websiteXML['item']['TEMPLATE']['@cdata'];
-      $this->glob['prettyurls'] = $websiteXML['item']['PRETTYURLS'];
-      $this->glob['permalink']  = $websiteXML['item']['PERMALINK'];
-      
-      // initialize objects
-      $this->matrix  = new TheMatrix;
-      $this->parser  = new TheMatrixParser;
-      
-      // selectable languages
-      $this->languages = array('en', 'it', 'ru');
-      
-      // build tables
-      $this->buildTables();
-      
-      // get schema for blog table and comments
-      $this->schema = $this->matrix->getSchema(self::TABLE_BLOG);
-      $this->commentsSchema = $this->matrix->getSchema(self::TABLE_COMMENTS);
-      
-      // configuration
-      $config = $this->matrix->query('SELECT * FROM '.self::TABLE_CONFIG, 'SINGLE');
-      $config['entryconfig'] = $this->matrix->explodeTrim("\n", $config['entryconfig']);
-      $config['imageconfig'] = $this->matrix->explodeTrim("\n", $config['imageconfig']);
-      $config['commentsconfigint'] = $this->matrix->explodeTrim("\n", $config['commentsconfigint']);
-      $config['commentsconfigcheck'] = $this->matrix->explodeTrim("\n", $config['commentsconfigcheck']);
-      $config['commentsbanlist'] = $this->matrix->explodeTrim("\n", $config['commentsbanlist']);
-      $config['commentscensor'] = $this->matrix->explodeTrim("\n", $config['commentscensor']);
-      $this->config   = array(
-        'siteurl'         => $this->glob['siteurl'],
-        'url'             => $config['baseurl'],
-        'entryurl'        => $config['baseurl'].'$yyyy/$mm/$dd/$slug/',
-        'authorurl'       => $config['baseurl'].$config['authorurl'],
-        'authorurlrel'    => $config['authorurl'],
-        'imgurl'          => $this->glob['siteurl'].'data/uploads/'.$this->schema['fields']['image']['path'],
-        'thumburl'        => $this->glob['siteurl'].'data/thumbs/'.$this->schema['fields']['image']['path'],
-        'title'           => $config['title'],
-        'tags'            => explode(',', $config['tags']),
-        'slug'            => $config['slug'],
-        'template'        => $config['template'],
-        'excerpt'         => $config['entryconfig'][0],
-        'entriesperpage'  => $config['entryconfig'][1],
-        'paragperentry'   => $config['entryconfig'][2],
-        'commentsperpage' => $config['commentsconfigint'][0],
-        'commentsmsg'     => $config['commentsmsg'],
-        'commentsminchar' => $config['commentsconfigint'][1],
-        'commentsmaxchar' => $config['commentsconfigint'][2],
-        'banlist'         => $config['commentsbanlist'],
-        'censor'          => $config['commentscensor'],
-      );
-      
-      // global matrix-blog
-      $this->blog    = $this->matrix->query('SELECT * FROM '.self::TABLE_BLOG.' ORDER BY credate DESC', 'MULTI', $cache=false);
-      
-      // fixes id of key (for search results, so the loop doesn't need to be done there).
-      foreach ($this->blog as $key=>$entry) {
-        $tmpentry = $entry;
-        unset($this->blog[$key]);
-        $this->blog[$entry['id']] = $tmpentry;
+    // initialize objects
+    $this->matrix  = new TheMatrix;
+    $this->parser  = new TheMatrixParser;
+    
+    // selectable languages
+    $this->languages = array('en', 'it', 'ru');
+    
+    // build tables
+    $this->buildTables();
+    
+    // get schema for blog table and comments
+    $this->schema = $this->matrix->getSchema(self::TABLE_BLOG);
+    $this->commentsSchema = $this->matrix->getSchema(self::TABLE_COMMENTS);
+    
+    // configuration
+    $config = $this->matrix->query('SELECT * FROM '.self::TABLE_CONFIG, 'SINGLE');
+    $config['entryconfig'] = $this->matrix->explodeTrim("\n", $config['entryconfig']);
+    $config['imageconfig'] = $this->matrix->explodeTrim("\n", $config['imageconfig']);
+    $config['commentsconfigint'] = $this->matrix->explodeTrim("\n", $config['commentsconfigint']);
+    $config['commentsconfigcheck'] = $this->matrix->explodeTrim("\n", $config['commentsconfigcheck']);
+    $config['commentsbanlist'] = $this->matrix->explodeTrim("\n", $config['commentsbanlist']);
+    $config['commentscensor'] = $this->matrix->explodeTrim("\n", $config['commentscensor']);
+    $this->config   = array(
+      'siteurl'         => $this->glob['siteurl'],
+      'url'             => $config['baseurl'],
+      'entryurl'        => $config['baseurl'].'$yyyy/$mm/$dd/$slug/',
+      'authorurl'       => $config['baseurl'].$config['authorurl'],
+      'authorurlrel'    => $config['authorurl'],
+      'imgurl'          => $this->glob['siteurl'].'data/uploads/'.$this->schema['fields']['image']['path'],
+      'thumburl'        => $this->glob['siteurl'].'data/thumbs/'.$this->schema['fields']['image']['path'],
+      'title'           => $config['title'],
+      'tags'            => explode_trim(',', $config['tags']),
+      'slug'            => $config['slug'],
+      'template'        => $config['template'],
+      'excerpt'         => $config['entryconfig']['excerpt'],
+      'entriesperpage'  => $config['entryconfig']['entries'],
+      'paragperentry'   => $config['entryconfig']['paragraphs'],
+      'commentsperpage' => $config['commentsconfigint']['comments'],
+      'commentsmsg'     => $config['commentsmsg'],
+      'commentsminchar' => $config['commentsconfigint']['minchars'],
+      'commentsmaxchar' => $config['commentsconfigint']['maxchars'],
+      'banlist'         => $config['commentsbanlist'],
+      'censor'          => $config['commentscensor'],
+    );
+    
+    // global matrix-blog
+    $this->blog    = $this->matrix->query('SELECT * FROM '.self::TABLE_BLOG.' ORDER BY credate DESC', 'MULTI', $cache=false);
+    
+    // fixes id of key (for search results, so the loop doesn't need to be done there).
+    foreach ($this->blog as $key=>$entry) {
+      $tmpentry = $entry;
+      unset($this->blog[$key]);
+      $this->blog[$entry['id']] = $tmpentry;
+    }
+    
+    // categories
+    $this->categories = $this->getCategoryTags();
+    
+    // authors
+    $this->authors = $this->matrix->getUsers();
+    
+    // links to templates
+    $this->template = GSDATAOTHERPATH.'/matrix_blog_template.xml';
+    $this->templates = array();
+    $this->templates['header']   = GSPLUGINPATH.self::FILE.'/php/display/header.php';
+    $this->templates['entry']    = GSPLUGINPATH.self::FILE.'/php/display/entry.php';
+    $this->templates['excerpt']  = GSPLUGINPATH.self::FILE.'/php/display/excerpt.php';
+    $this->templates['sidebar']  = GSPLUGINPATH.self::FILE.'/php/display/sidebar.php';
+    $this->templates['authors']  = GSPLUGINPATH.self::FILE.'/php/display/authors.php';
+    $this->templates['author']   = GSPLUGINPATH.self::FILE.'/php/display/author.php';
+    $this->templates['comments'] = GSPLUGINPATH.self::FILE.'/php/display/comments.php';
+    
+    // create template file
+    if (!file_exists($this->template)) {
+      $tmp = array();
+      foreach ($this->templates as $key => $template) {
+        $tmp[$key]['@cdata'] = file_get_contents($template);
       }
-      
-      // categories
-      $this->categories = $this->getCategoryTags();
-      
-      // authors
-      $this->authors = $this->matrix->getUsers();
-      
-      // links to templates
-      $this->template = GSDATAOTHERPATH.'/matrix_blog_template.xml';
-      $this->templates = array();
-      $this->templates['header']   = GSPLUGINPATH.self::FILE.'/php/display/header.php';
-      $this->templates['entry']    = GSPLUGINPATH.self::FILE.'/php/display/entry.php';
-      $this->templates['excerpt']  = GSPLUGINPATH.self::FILE.'/php/display/excerpt.php';
-      $this->templates['sidebar']  = GSPLUGINPATH.self::FILE.'/php/display/sidebar.php';
-      $this->templates['authors']  = GSPLUGINPATH.self::FILE.'/php/display/authors.php';
-      $this->templates['author']   = GSPLUGINPATH.self::FILE.'/php/display/author.php';
-      $this->templates['comments'] = GSPLUGINPATH.self::FILE.'/php/display/comments.php';
-      
-      // create template file
-      if (!file_exists($this->template)) {
-        $tmp = array();
-        foreach ($this->templates as $key => $template) {
-          $tmp[$key]['@cdata'] = file_get_contents($template);
-        }
-        $xml = Array2XML::createXML('channel', $tmp);
-        $xml->save($this->template);
-        #echo $xml->saveXML();
-      }
-      
-      // load uri
-      $this->uri = $this->parseURI();
-      
-      if ($this->isFrontEnd() && $this->initBlog()) {
-        $type = $this->getPageType($this->slug);
-      }
+      $xml = Array2XML::createXML('channel', $tmp);
+      $xml->save($this->template);
+      #echo $xml->saveXML();
+    }
+    
+    // load uri
+    $this->uri = $this->parseURI();
+    
+    if ($this->isFrontEnd() && $this->initBlog()) {
+      $this->type = $this->getPageType($this->slug);
+    }
+    
+    $this->init = true;
+    return true;
+  }
+  
+  public function info($key) {
+    // fill in information
+    if (empty($this->info)) {
+      $this->info['id']      = self::FILE;
+      $this->info['title']   = i18n_r(self::FILE.'/TITLE');
+      $this->info['version'] = self::VERSION;
+      $this->info['author']  = self::AUTHOR;
+      $this->info['url']     = self::URL;
+      $this->info['desc']    = i18n_r(self::FILE.'/DESC');
+      $this->info['page']    = self::PAGE;
+      $this->info['sidebar'] = i18n_r(self::FILE.'/SIDEBAR_TEXT');
+    }
+    
+    // return desired information
+    if (isset($this->info[$key])) {
+      return $this->info[$key];
     }
   }
   
   // check dependencies
-  private function checkDependencies() {
-    if (
-      class_exists('TheMatrix') &&
-      function_exists('i18n_init') && 
-      function_exists('get_i18n_search_results') && 
-      function_exists('pagify')
-    ) return true;
+  private function checkDependencies($end='front') {
+  
+    // matrix
+    $return[] = (class_exists('TheMatrix') || (class_exists('TheMatrix') && TheMatrix::VERSION < '1.03')) ? true : false;
+  
+    // i18n
+    $return[] = (function_exists('i18n_init')) ? true : false;
+    
+    // i18n search
+    $return[] = (function_exists('get_i18n_search_results')) ? true : false;
+    
+    // front-end only
+    if ($end == 'front') {
+      // pagify
+      $return[] = (function_exists('pagify')) ? true : false;
+    }
+    
+    if (!in_array(false, $return)) return true;
     else return false;
   }
   
@@ -167,17 +204,17 @@ class MatrixBlog {
   private function missingDependencies() {
     $dependencies = array();
     
-    if (!class_exists('TheMatrix')) {
-      $dependencies[] = array('name' => 'The Matrix', 'url' => 'https://github.com/n00dles/DM_matrix/');
+    if (!class_exists('TheMatrix') || (class_exists('TheMatrix') && TheMatrix::VERSION < '1.03')) {
+      $dependencies[] = array('name' => 'The Matrix (1.03+)', 'url' => 'https://github.com/n00dles/DM_matrix/');
     }
     if (!function_exists('i18n_init')) {
-      $dependencies[] = array('name' => 'I18N', 'url' => 'http://get-simple.info/extend/plugin/i18n/69/');
+      $dependencies[] = array('name' => 'I18N (3.2.3+)', 'url' => 'http://get-simple.info/extend/plugin/i18n/69/');
     }
     if (!function_exists('get_i18n_search_results')) {
-      $dependencies[] = array('name' => 'I18N Search', 'url' => 'http://get-simple.info/extend/plugin/i18n-search/82/');
+      $dependencies[] = array('name' => 'I18N Search (2.11+)', 'url' => 'http://get-simple.info/extend/plugin/i18n-search/82/');
     }
     if (!function_exists('pagify')) {
-      $dependencies[] = array('name' => 'Pagify', 'url' => 'http://get-simple.info/extend/plugin/pagify/83/');
+      $dependencies[] = array('name' => 'Pagify (1.1+)', 'url' => 'http://get-simple.info/extend/plugin/pagify/83/');
     }
     
     return $dependencies;
@@ -390,21 +427,21 @@ class MatrixBlog {
         array(
           'name' => 'title',
           'type' => 'textlong',
-          'desc' => i18n_r(self::FILE.'/LABEL_TITLE'),
+          'placeholder' => i18n_r(self::FILE.'/LABEL_TITLE'),
           'required' => 'required',
         ),
         array(
           'name' => 'subtitle',
           'type' => 'text',
           'label' => i18n_r(self::FILE.'/LABEL_SUBTITLE'),
-          'desc'  => i18n_r(self::FILE.'/LABEL_SUBTITLE'),
+          'placeholder'  => i18n_r(self::FILE.'/LABEL_SUBTITLE'),
           'class' => 'leftopt',
         ),
         array(
           'name' => 'slug',
           'type' => 'slug',
           'label' => i18n_r(self::FILE.'/LABEL_SLUG'),
-          'desc'  => strtolower(i18n_r(self::FILE.'/LABEL_SLUG')),
+          'placeholder'  => strtolower(i18n_r(self::FILE.'/LABEL_SLUG')),
           'class' => 'leftopt',
         ),
         array(
@@ -532,7 +569,7 @@ class MatrixBlog {
           'name' => 'imageconfig',
           'type' => 'intmulti',
           'default' => implode("\n", array(8, 900, 900, 100, 100)),
-          'other' => implode("\n", array(i18n_r(self::FILE.'/LABEL_MAXIMAGESIZE'), i18n_r(self::FILE.'/LABEL_MAXIMAGEWIDTH'), i18n_r(self::FILE.'/LABEL_MAXIMAGEHEIGHT'), i18n_r(self::FILE.'/LABEL_THUMBWIDTH'), i18n_r(self::FILE.'/LABEL_THUMBHEIGHT'))),
+          'labels' => implode("\n", array(i18n_r(self::FILE.'/LABEL_MAXIMAGESIZE'), i18n_r(self::FILE.'/LABEL_MAXIMAGEWIDTH'), i18n_r(self::FILE.'/LABEL_MAXIMAGEHEIGHT'), i18n_r(self::FILE.'/LABEL_THUMBWIDTH'), i18n_r(self::FILE.'/LABEL_THUMBHEIGHT'))),
           'rows' => 5,
           'class' => 'leftsec',
         ),
@@ -675,9 +712,10 @@ class MatrixBlog {
       $entry = $this->matrix->query('SELECT * FROM '.self::TABLE_BLOG.' WHERE slug = "'.$entry.'"', 'SINGLE');
       if (!$entry) return null;
     }
-    $year  = date('Y', $entry['credate']);
-    $month = date('m', $entry['credate']);
-    $day   = date('d', $entry['credate']);
+    $timestamp = strtotime($entry['credate']);
+    $year  = date('Y', $timestamp);
+    $month = date('m', $timestamp);
+    $day   = date('d', $timestamp);
     $replace = array();
     $replace['from'] = array('$yyyy', '$mm', '$dd', '$slug');
     $replace['to'] = array($year, $month, $day, $entry['slug']);
@@ -698,7 +736,7 @@ class MatrixBlog {
     if (count($langs)>1) {
       echo '<div id="langavail">'.i18n_r(self::FILE.'/AVAIL_LANG').': ';
       foreach ($langs as $lang) {
-        echo '<a href="?setlang='.$lang.'" data-lang="'.$lang.'">'.$lang.'</a> ';
+        echo '<a href="'.$this->getEntryURL($slug).'?setlang='.$lang.'" data-lang="'.$lang.'">'.$lang.'</a> ';
       }
       echo '</div>';
     }
@@ -973,13 +1011,16 @@ class MatrixBlog {
       elseif (isset($_GET['lang'])) {
         $lang = $_GET['lang'];
       }
+      elseif (isset($_GET['setlang'])) {
+        $lang = $_GET['setlang'];
+      }
       else {
         $lang = $this->languages[0];
       }
       
       // load correct content based on language
       foreach ($entry as $p) {
-        if ($p['language']==$lang) {
+        if ($p['language'] == $lang) {
           $entry = $p;
           break;
         }
@@ -1037,6 +1078,8 @@ class MatrixBlog {
     
     // pagify content
     if (function_exists('return_pagify_content') && $this->config['paragperentry']!=0) {
+      $entry = $this->entry;
+      
       // get page number
       if (!isset($_GET['page'])) $_GET['page'] = 1;
       $pageNum = $_GET['page'];
@@ -1293,49 +1336,136 @@ class MatrixBlog {
 
   // main front-end display
   public function display() {
-    // globals
-    global $data_index;
-    
-    // load header
-    ob_start();
-    $this->includeTemplate('header');
-    $data_index->content = ob_get_contents();
-    ob_end_clean();
-    
-    // page type
-    $type = $this->getPageType($this->slug);
-    
-    // change output depending on type
-    if ($type == 'entry') {
-      $this->displayEntry($this->slug);
-    }
-    elseif($type == 'entries') {
-      $this->displayEntries();
-    }
-    elseif ($type == 'search') {
-      $this->displaySearchResults();
-    }
-    elseif ($type == 'category') {
-      $this->displayCategory();
-    }
-    elseif ($type == 'archive') {
-      $this->displayArchive();
-    }
-    elseif ($type == 'authors') {
-      $this->displayAuthors();
-    }
-    elseif ($type == 'author') {
-      $this->displayAuthor();
+    // load if the dependencies exist
+    if ($this->checkDependencies()) {
+      // initialize
+      $this->init();
+      
+      // globals
+      global $data_index;
+      
+      // load header
+      ob_start();
+      $this->includeTemplate('header');
+      $data_index->content = ob_get_contents();
+      ob_end_clean();
+      
+      // page type
+      #$type = $this->getPageType($this->slug);
+      $type = $this->type;
+      
+      // change output depending on type
+      if ($type == 'entry') {
+        $this->displayEntry($this->slug);
+      }
+      elseif($type == 'entries') {
+        $this->displayEntries();
+      }
+      elseif ($type == 'search') {
+        $this->displaySearchResults();
+      }
+      elseif ($type == 'category') {
+        $this->displayCategory();
+      }
+      elseif ($type == 'archive') {
+        $this->displayArchive();
+      }
+      elseif ($type == 'authors') {
+        $this->displayAuthors();
+      }
+      elseif ($type == 'author') {
+        $this->displayAuthor();
+      }
     }
   }
   
   /* ====== ADMIN ====== */
   
+  // fix compatibility issues upgrading from Matrix 1.02 to 1.03
+  private function compatibility() {
+    $schema = array();
+    $schema[self::TABLE_BLOG]     = $this->matrix->getSchema(self::TABLE_BLOG);
+    $schema[self::TABLE_COMMENTS] = $this->matrix->getSchema(self::TABLE_COMMENTS);
+    $schema[self::TABLE_CONFIG]   = $this->matrix->getSchema(self::TABLE_CONFIG);
+    
+    // blog
+    foreach ($schema[self::TABLE_BLOG]['fields'] as $key => $field) {
+      if (empty($field['placeholder']) && !empty($field['desc'])) {
+        $schema[self::TABLE_BLOG]['fields'][$key]['placeholder'] = $field['desc'];
+        $schema[self::TABLE_BLOG]['fields'][$key]['desc'] = '';
+      }
+    }
+    // comments
+    foreach ($schema[self::TABLE_COMMENTS]['fields'] as $key => $field) {
+      if (empty($field['placeholder']) && !empty($field['desc'])) {
+        $schema[self::TABLE_COMMENTS]['fields'][$key]['placeholder'] = $field['desc'];
+        $schema[self::TABLE_COMMENTS]['fields'][$key]['desc'] = '';
+      }
+    }
+    
+    // config
+    foreach ($schema[self::TABLE_CONFIG]['fields'] as $key => $field) {
+      // placeholders
+      if (empty($field['placeholder']) && !empty($field['desc'])) {
+        $schema[self::TABLE_CONFIG]['fields'][$key]['placeholder'] = $field['desc'];
+        $schema[self::TABLE_CONFIG]['fields'][$key]['desc'] = '';
+      }
+      // labels
+      if (empty($field['labels']) && !empty($field['other'])) {
+        $schema[self::TABLE_CONFIG]['fields'][$key]['labels'] = $field['other'];
+        $schema[self::TABLE_CONFIG]['fields'][$key]['other'] = '';
+      }
+      // imageconfig
+      if ($field['name'] == 'imageconfig') {
+        // fix row names
+        if (is_numeric($field['rows'])) {
+          $schema[self::TABLE_CONFIG]['fields'][$field['name']]['rows'] = implode("\n", array('maxsize', 'width', 'height', 'thumbx', 'thumby'));
+        }
+      }
+      // entryconfig
+      if ($field['name'] == 'entryconfig') {
+        // fix row names
+        if (is_numeric($field['rows'])) {
+          $schema[self::TABLE_CONFIG]['fields'][$field['name']]['rows'] = implode("\n", array('excerpt', 'entries', 'paragraphs'));
+        }
+      }
+      // commentsconfigint
+      if ($field['name'] == 'commentsconfigint') {
+        // fix row names
+        if (is_numeric($field['rows'])) {
+          $schema[self::TABLE_CONFIG]['fields'][$field['name']]['rows'] = implode("\n", array('comments', 'minchar', 'maxchar', 'close'));
+        }
+      }
+    }
+    
+    $return = array();
+    foreach ($schema as $name => $prop) {
+      $return[] = $this->matrix->modSchema($name, $prop);
+    }
+    
+    if (!in_array(false, $return)) return true;
+    else return false;
+  }
+  
   // admin panel (back-end)
   public function admin() {
+    $this->init();
     $matrix = $this->matrix; // just to save you writing $this->matrix all the time
     
-    if ($this->checkDependencies()) {
+    if ($this->checkDependencies('back')) {
+      // compatibility
+      if (isset($_GET['compatibility'])) {
+        $compat = $this->compatibility();
+        if ($compat) {
+          $matrix->getAdminError(i18n_r(self::FILE.'/COMPAT_SUCCESS'), true);
+        }
+        // error message
+        else {
+          $matrix->getAdminError(i18n_r(self::FILE.'/COMPAT_ERROR'), false);
+        }
+      }
+      
+      
       // create an entry
       if (isset($_GET['create'])) {
         include_once(GSPLUGINPATH.self::FILE.'/php/admin/create.php');
@@ -1389,11 +1519,12 @@ class MatrixBlog {
         
         <!--entry template-->
         <form method="post">
-          <textarea name="edit-template" class="codeeditor DM_codeeditor text" id="post-edit-template"><?php echo $template; ?></textarea>
           <?php
-            // get codemirror script
-            $matrix->initialiseCodeMirror();
-            $matrix->instantiateCodeMirror('edit-template');
+            $params = array();
+            $params['properties'] = ' name="edit-template" class="codeeditor DM_codeeditor text" id="post-edit-template"';
+            $params['value'] = $template;
+            $params['id'] = 'post-edit-template';
+            $matrix->getEditor($params);
           ?>
           <input type="submit" class="submit" value="<?php echo i18n_r('BTN_SAVECHANGES'); ?>"/>
         </form>
@@ -1463,9 +1594,16 @@ class MatrixBlog {
       echo '<div class="entries">';
     }
   }
+  // get blog
+  private function getBlog() {
+    if (!$this->init) $this->init();
+    if (empty($this->matrix)) $this->matrix = new TheMatrix;
+    return $this->matrix->query('SELECT * FROM '.self::TABLE_BLOG.' ORDER BY credate DESC', 'MULTI', $cache=false, 'id');
+  }
     
   // search index
   public function searchIndex() {
+    if (empty($this->blog)) $this->blog = $this->getBlog();
     // for each item call i18n_search_index_item($id, $language, $creDate, $pubDate, $tags, $title, $content)
     foreach ($this->blog as $item) {
       // only index the page if we have selected to
@@ -1477,6 +1615,9 @@ class MatrixBlog {
         $lang = $item['language'];
       
         // format date correctly (the two stages MUST be done - you cannot just use the raw UNIX stamp as-is
+        $item['credate'] = is_numeric($item['credate']) ? $item['credate'] : strtotime($item['credate']);
+        $item['pubdate'] = is_numeric($item['pubdate']) ? $item['pubdate'] : strtotime($item['pubdate']);
+        
         $creDate = date('j F Y', $item['credate']);
         $creDate = strtotime($creDate);
         $pubDate = date('j F Y', $item['pubdate']);
@@ -1519,6 +1660,7 @@ class MatrixBlog {
   
   // search item
   public function searchItem($id, $language, $creDate, $pubDate, $score) {
+    if (empty($this->blog)) $this->blog = $this->getBlog();
     if (substr($id, 0, strlen(self::SEARCHID)) == self::SEARCHID) {
       // load data
       $data = $this->blog[substr($id, strlen(self::SEARCHID))];
@@ -1536,6 +1678,7 @@ class MatrixBlog {
   
   // search display
   public function searchDisplay($item, $showLanguage, $showDate, $dateFormat, $numWords) {
+    if (!$this->init) $this->init();
     if (substr($item->id, 0, strlen(self::SEARCHID)) == self::SEARCHID) {
       // convert i18n search object to array
       $entry = array();
@@ -1627,7 +1770,7 @@ class MatrixBlog {
         <?php echo $comment['content']; ?>
         <hr>
         <a href="<?php echo $this->getEntryURL($entry['slug']); ?>"><?php echo $entry['title']; ?></a> @
-        <?php echo date('r', $comment['date']); ?>
+        <?php echo $comment['date']; ?>
       </div>
       
     <?php
@@ -1838,24 +1981,8 @@ class MatrixBlog {
           var name    = $(this).closest('.commentWrap').data('name');
           var content = $(this).prev('.rawcontent').text();
           $('#post-parent').val(id);
-          //$('#postreply').click();
           //return false;
         });
-        
-        // are you sure?
-        /*
-        $('.commentsForm').submit(function(e) {
-          e.preventDefault();
-          $.Zebra_Dialog(<?php echo json_encode(i18n_r(self::FILE.'/COMMENT_READYTOSUBMIT')); ?>, {
-              'type':     'question',
-              'title':    <?php echo json_encode(i18n_r(self::FILE.'/COMMENT_SUBMITTING')); ?>,
-              'buttons':  [
-                    {caption: <?php echo json_encode(i18n_r(self::FILE.'/OPTION_NO')); ?>, },
-                    {caption: <?php echo json_encode(i18n_r(self::FILE.'/OPTION_YES')); ?>, callback: function(e) { $(this).unbind().submit(); }},
-                ]
-          });
-        }); // submit
-        */
       }); // ready
     </script>
     

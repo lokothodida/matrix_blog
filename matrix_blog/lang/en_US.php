@@ -2,7 +2,7 @@
   // english language file (en_US)
   $i18n = array (
     // general
-      'TITLE'                  => 'Matrix Blog',
+      'TITLE'                  => 'The Matrix: Blog',
       'AVAIL_LANG'             => 'Available languages',
       'ENTRY'                  => 'Entry',
       'ENTRIES'                => 'Entries',
@@ -23,6 +23,9 @@
       'DESC'                   => 'Blogging software using The Matrix.',
       'SIDEBAR_TEXT'           => 'Blog Entries',
       'PAGES_NONE'             => 'No entries.',
+      'COMPATIBILITY'          => 'Compatibility',
+      'COMPAT_SUCCESS'         => 'Compatibility issues resolved.',
+      'COMPAT_ERROR'           => 'There was an error resolving the compatibility issues.',
       'PAGES_CREATESUCCESS'    => 'Entry <strong>%s</strong> created successfully.',
       'PAGES_CREATEERROR'      => 'There was an error creating your entry.',
       'PAGES_UPDATESUCCESS'    => '<strong>%s</strong> updated successfully.',

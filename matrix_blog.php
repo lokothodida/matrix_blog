@@ -16,21 +16,21 @@
 
 # register plugin
   register_plugin(
-    $mblog::FILE,           // id
-    $mblog->title,          // name
-    $mblog::VERSION,        // version
-    $mblog::AUTHOR,         // author
-    $mblog::URL,            // url
-    $mblog->desc,           // description
-    $mblog::PAGE,           // page type - on which admin tab to display
-    array($mblog, 'admin')  // administration function
+    $mblog->info('id'),             // id
+    $mblog->info('title'),           // name
+    $mblog->info('version'),        // version
+    $mblog->info('author'),         // author
+    $mblog->info('url'),            // url
+    $mblog->info('desc'),           // description
+    $mblog->info('page'),           // page type - on which admin tab to display
+    array($mblog, 'admin')          // administration function
   );
 
 # activate actions/filters
   # front-end
     add_action('error-404', array($mblog, 'display')); // display for plugin
   # back-end
-    add_action($mblog::PAGE.'-sidebar', 'createSideMenu' , array($mblog::FILE, $mblog->sidebar)); // sidebar link
+    add_action($mblog->info('page').'-sidebar', 'createSideMenu' , array($mblog->info('id'), $mblog->info('sidebar'))); // sidebar link
     add_action('search-index',   array($mblog, 'searchIndex'));
     add_filter('search-item',    array($mblog, 'searchItem'));
     add_filter('search-display', array($mblog, 'searchDisplay'));
@@ -69,7 +69,7 @@
   
   # get field date
   function mblog_get_field_date($entry, $field, $format='r') {
-    if (isset($entry[$field])) echo date($format, $entry[$field]);
+    if (isset($entry[$field])) echo date($format, strtotime($entry[$field]));
   }
   
   # get entry url

@@ -10,28 +10,36 @@
       $matrix->getAdminError(i18n_r(self::FILE.'/CONFIG_UPDATESUCCESS'), true, true, $undo);
       
       // fix categories schema and image upload settings
-      $this->schema['fields']['category']['options'] = $update['new']['category']['@cdata'];
+      #$this->schema['fields']['category']['options'] = $update['new']['category']['@cdata'];
       
       // fix format for image upload
-      $imageconfig = $matrix->explodeTrim("\n", $update['new']['imageconfig']);
-      $imageconfig[0] = (int)$imageconfig[0]*10*10*10*1024; // mb conversion
-      $imageconfig = $matrix->implodeTrim("\n", $imageconfig);
-      $this->schema['fields']['image']['options'] = $imageconfig;
-      
+      $this->schema['fields']['image']['options'] = implode_trim("\n", $update['new']['imageconfig']);
+      #$imageconfig = $matrix->explodeTrim("\n", $update['new']['imageconfig']);
+      #$imageconfig[0] = (int)$imageconfig[0]*10*10*10*1024; // mb conversion
+      #$imageconfig = $matrix->implodeTrim("\n", $imageconfig);
+      #$this->schema['fields']['image']['options'] = $imageconfig;
+
       // fix languages
-      $this->schema['fields']['language']['options'] = $update['new']['language']['@cdata'];
+      #$this->schema['fields']['language']['options'] = $update['new']['language']['@cdata'];
+      $this->schema['fields']['language']['options'] = implode_trim("\n", $update['new']['language']);
       
+      /*
       // fix comments-based schema
       $commentsconfigint = $matrix->explodeTrim("\n", $update['new']['commentsconfigint']);
       $commentsconfigcheck = $matrix->explodeTrim("\n", $update['new']['commentsconfigcheck']);
       $minmax = '.{'.$commentsconfigint[1].', '.$commentsconfigint[2].'}';
       $this->commentsSchema['fields']['content']['maxlength'] = $commentsconfigint[2];
       $this->commentsSchema['fields']['content']['validation'] = $minmax;
-      
-      
+      */
+
+      $required = array('name', 'email', 'url');
+      foreach ($required as $req) {
+        $this->commentsSchema['fields'][$req]['required'] = (in_array($req, $update['new']['commentsconfigcheck'])) ? 'required' : '';
+      }
+      /*
       // change 'required' fields settings
       if (in_array(i18n_r(self::FILE.'/OPTION_REQUIRENAME'), $commentsconfigcheck)) {
-        $this->commentsSchema['fields']['name']['required'] = 'required';
+       
       }
       else {
         $this->commentsSchema['fields']['name']['required'] = '';
@@ -48,7 +56,7 @@
       else {
         $this->commentsSchema['fields']['url']['required'] = '';
       }
-      
+      */
       // modify the schemas
       $matrix->modSchema(self::TABLE_BLOG, $this->schema);
       $matrix->modSchema(self::TABLE_COMMENTS, $this->commentsSchema);
@@ -94,6 +102,8 @@
     // refresh the index to reflect the changes
     $matrix->refreshIndex();
   }
+  $config = $matrix->recordExists(self::TABLE_CONFIG, 0);
+  
 ?>
 
 <!--header-->

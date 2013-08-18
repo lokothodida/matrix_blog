@@ -4,7 +4,7 @@
     <img class="gravatar" src="<?php mblog_get_comment_gravatar($comment); ?>" alt="" />
     <div class="details">
       Posted by <a href="mailto:<?php mblog_get_comment_field($comment, 'email'); ?>"><?php mblog_get_comment_field($comment, 'name'); ?></a> 
-      @ <?php echo date('r', $comment['date']); ?>
+      @ <?php echo $comment['date']; ?>
     </div>
     <div class="commentcontent"><?php mblog_get_comment_field($comment, 'content'); ?></div>
     <!--raw bbcode-->

@@ -74,6 +74,7 @@
     <a href="load.php?id=<?php echo self::FILE; ?>&template=entry"><?php echo i18n_r(self::FILE.'/LABEL_TEMPLATES'); ?></a>
     <a href="load.php?id=<?php echo self::FILE; ?>" class="current"><?php echo i18n_r(self::FILE.'/ENTRIES'); ?></a> 
     <a href="<?php echo $this->config['url']; ?>" target="_blank"><?php echo i18n_r('VIEW'); ?></a> 
+    <a href="load.php?id=<?php echo self::FILE; ?>&compatibility"><?php echo i18n_r(self::FILE.'/COMPATIBILITY'); ?></a> 
     <div class="clear"></div>
   </div>
 
@@ -105,7 +106,7 @@
         <td style="text-align: left; width: 58%;">
           <a href="load.php?id=<?php echo self::FILE; ?>&edit=<?php echo $entry['id']; ?>"><?php echo $entry['title']; ?></a>
         </td>
-        <td style="text-align: right; width: 30%"><?php echo date('r', $entry['pubdate']); ?></td>
+        <td style="text-align: right; width: 30%"><?php echo $entry['pubdate']; ?></td>
         <td style="text-align: right; width: 5%;">[<?php echo $entry['language']; ?>]</td>
         <td style="text-align: right; width: 7%;">
           <a href="<?php echo $this->getEntryURL($entry); ?>?setlang=<?php echo $entry['language']; ?>" target="_blank" class="cancel">#</a> 
